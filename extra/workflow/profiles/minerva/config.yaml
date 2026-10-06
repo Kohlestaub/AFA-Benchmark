@@ -1,0 +1,71 @@
+# Snakemake workflow profile for the minerva cluster, GPU jobs.
+#
+# Snakemake runs on the login node and submits one Slurm job per rule. Every
+# job runs inside the Apptainer image containers/afabench.sif (built with
+# containers/build.sh). Training, classifier and evaluation jobs get one GPU.
+# See docs/tutorials/minerva.md for the full workflow, for example:
+#
+#   snakemake --profile extra/workflow/profiles/config/gpu_methods \
+#       all_eval_methods \
+#       --workflow-profile extra/workflow/profiles/minerva \
+#       --config device=cuda use_wandb=false
+#
+# Partition limits are not known in advance: check them with
+# `sinfo -o "%P %l %G"` and lower `runtime` if the partition rejects jobs.
+executor: slurm
+jobs: 100
+latency-wait: 60 # seconds
+software-deployment-method: apptainer
+apptainer-args: "--nv"
+# Failed jobs are resubmitted. Training scripts with checkpoint support (L2M)
+# save before the Slurm time limit and continue from there on the next try.
+retries: 3
+
+default-resources:
+  slurm_partition: long
+  runtime: 120 # minutes
+  cpus_per_task: 1
+  mem_mb: 8000
+
+set-resources:
+  train_classifier:
+    runtime: 720 # 12 hours
+    cpus_per_task: 4
+    mem_mb: 16000
+    slurm_extra: "--gres=gpu:1"
+  train_classifier_for_method:
+    runtime: 720
+    cpus_per_task: 4
+    mem_mb: 16000
+    slurm_extra: "--gres=gpu:1"
+  pretrain_model:
+    runtime: 720
+    cpus_per_task: 4
+    mem_mb: 16000
+    slurm_extra: "--gres=gpu:1"
+  train_method_with_pretrained_model:
+    runtime: 720
+    cpus_per_task: 4
+    mem_mb: 16000
+    slurm_extra: "--gres=gpu:1"
+  train_method_without_pretrained_model:
+    runtime: 720
+    cpus_per_task: 4
+    mem_mb: 16000
+    slurm_extra: "--gres=gpu:1"
+  eval_method:
+    runtime: 720
+    cpus_per_task: 4
+    mem_mb: 16000
+    slurm_extra: "--gres=gpu:1"
+
+  # Opening the merged evaluation dataframes needs more memory than writing them
+  split_by_classifier_type:
+    cpus_per_task: 4
+    mem_mb: 32000
+  plot_eval_perf:
+    cpus_per_task: 4
+    mem_mb: 32000
+  plot_eval_actions:
+    cpus_per_task: 4
+    mem_mb: 32000

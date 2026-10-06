@@ -197,3 +197,12 @@ cython_debug/
 /.snakemake
 /.checkpoint.error
 /.claude/worktrees
+
+# Apptainer images, built with containers/build.sh
+/containers/*.sif
+
+# Caches that tools write into $HOME, which is the repository root when
+# Snakemake runs jobs in the container (`apptainer exec --home <repo>`)
+/.config
+/.triton
+/.local

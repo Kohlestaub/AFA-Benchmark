@@ -1,0 +1,51 @@
+# Snakemake workflow profile for the minerva cluster, CPU-only jobs.
+#
+# Same as extra/workflow/profiles/minerva, but no job requests a GPU. Use it
+# for the CPU stages (CPU methods, merging and plotting) with device=cpu:
+#
+#   snakemake --profile extra/workflow/profiles/config/cpu_methods \
+#       all_eval_methods \
+#       --workflow-profile extra/workflow/profiles/minerva_cpu \
+#       --config device=cpu use_wandb=false
+executor: slurm
+jobs: 100
+latency-wait: 60 # seconds
+software-deployment-method: apptainer
+retries: 3
+
+default-resources:
+  slurm_partition: long
+  runtime: 120 # minutes
+  cpus_per_task: 1
+  mem_mb: 8000
+
+set-resources:
+  train_classifier:
+    runtime: 720 # 12 hours
+    cpus_per_task: 8
+  train_classifier_for_method:
+    runtime: 720
+    cpus_per_task: 8
+  pretrain_model:
+    runtime: 720
+    cpus_per_task: 8
+  train_method_with_pretrained_model:
+    runtime: 720
+    cpus_per_task: 8
+  train_method_without_pretrained_model:
+    runtime: 720
+    cpus_per_task: 8
+  eval_method:
+    runtime: 720
+    cpus_per_task: 8
+
+  # Opening the merged evaluation dataframes needs more memory than writing them
+  split_by_classifier_type:
+    cpus_per_task: 4
+    mem_mb: 32000
+  plot_eval_perf:
+    cpus_per_task: 4
+    mem_mb: 32000
+  plot_eval_actions:
+    cpus_per_task: 4
+    mem_mb: 32000

@@ -42,4 +42,5 @@ See the [Snakemake SLURM plugin documentation](https://snakemake.readthedocs.io/
 
 ## Related documentation
 
+- [Running on minerva with Apptainer](minerva.md) - Cluster without internet on the compute nodes
 - [Pipeline explanation](pipeline_explanation.md) - Overview of the full pipeline

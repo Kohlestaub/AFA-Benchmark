@@ -1,0 +1,80 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+# AFABench runtime image: Python 3.12.10 plus every dependency from uv.lock.
+#
+# The image holds the environment only. The repository is bind-mounted at run
+# time (Snakemake mounts the working directory, and so does a plain
+# `apptainer exec` started from the repository root), so code changes need a
+# `git pull`, not a rebuild. Rebuild only when uv.lock changes.
+#
+# Build from the repository root (see containers/build.sh and
+# docs/tutorials/minerva.md):
+#   sudo apptainer build containers/afabench-<hash>.sif containers/afabench.def
+
+%files
+    pyproject.toml /opt/afabench/pyproject.toml
+    uv.lock /opt/afabench/uv.lock
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export VIRTUAL_ENV=/opt/venv
+    export PATH="/opt/venv/bin:${PATH}"
+    # Ignore packages in the user's ~/.local, which is mounted from the host.
+    export PYTHONNOUSERSITE=1
+    # Make the bind-mounted repository importable (`import afabench`). Python
+    # turns this relative entry into the absolute working directory at
+    # startup, and jobs always start in the repository root.
+    export PYTHONPATH=".${PYTHONPATH:+:${PYTHONPATH}}"
+    export PYTHONUNBUFFERED=1
+
+%post
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends ca-certificates curl
+    rm -rf /var/lib/apt/lists/*
+
+    # uv installs both the interpreter and the locked dependencies. Everything
+    # lives under /opt so that it stays readable for the unprivileged user
+    # that runs the container (/root is not).
+    UV_VERSION=0.11.32
+    UV_SHA256=aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967
+    UV_ARCHIVE=uv-x86_64-unknown-linux-gnu.tar.gz
+    curl -LsSf -o "/tmp/${UV_ARCHIVE}" \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${UV_ARCHIVE}"
+    echo "${UV_SHA256}  /tmp/${UV_ARCHIVE}" | sha256sum -c -
+    mkdir -p /opt/uv/bin
+    tar -xzf "/tmp/${UV_ARCHIVE}" -C /opt/uv/bin --strip-components=1
+    rm "/tmp/${UV_ARCHIVE}"
+
+    export UV_PYTHON_INSTALL_DIR=/opt/uv/python
+    export UV_PROJECT_ENVIRONMENT=/opt/venv
+    export UV_CACHE_DIR=/tmp/uv-cache
+    export UV_LINK_MODE=copy
+    export UV_COMPILE_BYTECODE=1
+    cd /opt/afabench
+    /opt/uv/bin/uv sync --frozen --no-dev --no-install-project
+    rm -rf /tmp/uv-cache
+
+    # Record which lock file the image was built from, so a mismatch with the
+    # checked-out repository can be detected (containers/check_image.sh).
+    sha256sum uv.lock | cut -d' ' -f1 > /opt/afabench/uv.lock.sha256
+    chmod -R a+rX /opt/uv /opt/venv /opt/afabench
+
+%runscript
+    exec python "$@"
+
+%test
+    python -c "import hydra, lightning, polars, torch, torchrl; print('torch', torch.__version__)"
+
+%labels
+    org.opencontainers.image.title afabench
+    org.opencontainers.image.description AFABench runtime environment from uv.lock
+
+%help
+    AFABench runtime environment (Python 3.12.10 and the locked dependencies).
+    Run commands from the repository root, for example:
+        apptainer exec --nv containers/afabench.sif python scripts/eval/eval_afa_method.py ...
+    Snakemake uses the image automatically with --software-deployment-method apptainer.
