@@ -15,10 +15,18 @@ if [[ ! -e "${image}" ]]; then
     exit 1
 fi
 
+# Show Apptainer's own error when the image does not run at all, for example
+# after an incomplete copy.
+if ! apptainer exec "${image}" true; then
+    echo "Apptainer cannot run ${image}, see the error above. If the copy" \
+        "was interrupted, its size differs from the built image." >&2
+    exit 1
+fi
+
 expected="$(cat uv.lock containers/afabench.def | sha256sum | cut -d' ' -f1)"
 # Images built before the definition was part of the hash have no such file.
 actual="$(apptainer exec "${image}" cat /opt/afabench/image.sha256 2>/dev/null \
-    || echo unknown)"
+    || echo "none (an older image)")"
 if [[ "${expected}" != "${actual}" ]]; then
     echo "${image} was built from a different uv.lock or" \
         "containers/afabench.def." >&2
