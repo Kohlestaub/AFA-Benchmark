@@ -106,6 +106,14 @@ Snakemake does not rerun steps when the code or the configuration changes
 that datasets generated elsewhere are reused). Rerun steps on purpose with
 `--forcerun <rule>`.
 
+For the same reason, a smoke run's results would be reused by a real run:
+`smoke_test=true` writes to the same files. Before a real run, delete them
+and keep the datasets:
+
+```shell
+find extra/output -mindepth 1 -maxdepth 1 ! -name datasets -exec rm -rf {} +
+```
+
 ## 5. Time limits and checkpoints
 
 A job stops after a day at the latest. Submit the same command again to
