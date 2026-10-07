@@ -447,10 +447,11 @@ def stop_for_time_limit(
     """
     Act on a time-limit stop according to `CheckpointConfig.on_timeout`.
 
-    With "resume", exit with `EXIT_CODE_RESUME` so that the job fails and is
-    resubmitted (Snakemake `--retries`); the next run continues from the
-    checkpoint that was just saved. With "finalize", return so the caller can
-    save its result from the state reached so far.
+    With "resume", exit with `EXIT_CODE_RESUME` so that the step fails and
+    runs again later (in the next Slurm job, or through Snakemake
+    `--retries`); the next run continues from the checkpoint that was just
+    saved. With "finalize", return so the caller can save its result from
+    the state reached so far.
     """
     if on_timeout == ON_TIMEOUT_RESUME:
         log.warning(

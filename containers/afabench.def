@@ -1,12 +1,13 @@
 Bootstrap: docker
 From: ubuntu:24.04
 
-# AFABench runtime image: Python 3.12.10 plus every dependency from uv.lock.
+# AFABench runtime image: Python 3.12.10 plus every dependency from uv.lock,
+# including the dev group, which has Snakemake. The whole pipeline can
+# therefore run inside the image, with nothing installed on the cluster.
 #
 # The image holds the environment only. The repository is bind-mounted at run
-# time (Snakemake mounts the working directory, and so does a plain
-# `apptainer exec` started from the repository root), so code changes need a
-# `git pull`, not a rebuild. Rebuild only when uv.lock changes.
+# time (`apptainer exec` mounts the working directory), so code changes need a
+# `git pull`, not a rebuild. Rebuild only when uv.lock or this file changes.
 #
 # Build from the repository root (see containers/build.sh and
 # docs/tutorials/minerva.md):
@@ -15,6 +16,7 @@ From: ubuntu:24.04
 %files
     pyproject.toml /opt/afabench/pyproject.toml
     uv.lock /opt/afabench/uv.lock
+    containers/afabench.def /opt/afabench/afabench.def
 
 %environment
     export LC_ALL=C.UTF-8
@@ -55,12 +57,14 @@ From: ubuntu:24.04
     export UV_LINK_MODE=copy
     export UV_COMPILE_BYTECODE=1
     cd /opt/afabench
-    /opt/uv/bin/uv sync --frozen --no-dev --no-install-project
+    # The default dependency groups include dev, which has Snakemake.
+    /opt/uv/bin/uv sync --frozen --no-install-project
     rm -rf /tmp/uv-cache
 
-    # Record which lock file the image was built from, so a mismatch with the
-    # checked-out repository can be detected (containers/check_image.sh).
-    sha256sum uv.lock | cut -d' ' -f1 > /opt/afabench/uv.lock.sha256
+    # Record which lock file and definition the image was built from, so a
+    # mismatch with the checked-out repository can be detected
+    # (containers/check_image.sh).
+    cat uv.lock afabench.def | sha256sum | cut -d' ' -f1 > /opt/afabench/image.sha256
     chmod -R a+rX /opt/uv /opt/venv /opt/afabench
 
 %runscript
@@ -68,13 +72,14 @@ From: ubuntu:24.04
 
 %test
     python -c "import hydra, lightning, polars, torch, torchrl; print('torch', torch.__version__)"
+    snakemake --version
 
 %labels
     org.opencontainers.image.title afabench
     org.opencontainers.image.description AFABench runtime environment from uv.lock
 
 %help
-    AFABench runtime environment (Python 3.12.10 and the locked dependencies).
-    Run commands from the repository root, for example:
+    AFABench runtime environment (Python 3.12.10 and the locked dependencies,
+    including Snakemake). Run commands from the repository root, for example:
+        apptainer exec --nv containers/afabench.sif snakemake --profile ...
         apptainer exec --nv containers/afabench.sif python scripts/eval/eval_afa_method.py ...
-    Snakemake uses the image automatically with --software-deployment-method apptainer.

@@ -15,8 +15,6 @@ Runtime filters (--config, select subsets to run):
     smoke_test (bool, default=False): Run smoke tests
     initializer (str, default='cold'): Initialization strategy
     eval_dataset_split (str, default='test'): Dataset split for evaluation
-    container_image (str, default='containers/afabench.sif'): Apptainer
-        image for --software-deployment-method apptainer (ignored otherwise)
 
 Output namespacing:
     - All initializer-dependent artifacts are stored under
@@ -70,10 +68,6 @@ sys.path.insert(0, src_dir)
 from config import load_config
 
 _config = load_config(config)
-
-# Apptainer image for runs with --software-deployment-method apptainer, as
-# in the minerva workflow profiles. Without that flag this has no effect.
-container: config.get("container_image", "containers/afabench.sif")
 
 NO_PRETRAIN_STR = _config["NO_PRETRAIN_STR"]
 DATASET_INSTANCE_INDICES = _config["DATASET_INSTANCE_INDICES"]

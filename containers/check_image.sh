@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Check that the Apptainer image was built from the uv.lock in this checkout.
+# Check that the Apptainer image was built from the uv.lock and
+# containers/afabench.def in this checkout.
 #
 # Usage: containers/check_image.sh [image]   (default: containers/afabench.sif)
 # Exits with status 1 when the image is missing or out of date.
@@ -14,13 +15,17 @@ if [[ ! -e "${image}" ]]; then
     exit 1
 fi
 
-expected="$(sha256sum uv.lock | cut -d' ' -f1)"
-actual="$(apptainer exec "${image}" cat /opt/afabench/uv.lock.sha256)"
+expected="$(cat uv.lock containers/afabench.def | sha256sum | cut -d' ' -f1)"
+# Images built before the definition was part of the hash have no such file.
+actual="$(apptainer exec "${image}" cat /opt/afabench/image.sha256 2>/dev/null \
+    || echo unknown)"
 if [[ "${expected}" != "${actual}" ]]; then
-    echo "${image} was built from a different uv.lock." >&2
+    echo "${image} was built from a different uv.lock or" \
+        "containers/afabench.def." >&2
     echo "  checkout: ${expected}" >&2
     echo "  image:    ${actual}" >&2
     echo "Rebuild it with containers/build.sh and copy it over." >&2
     exit 1
 fi
-echo "${image} matches uv.lock (${expected:0:12})."
+echo "${image} matches uv.lock and containers/afabench.def" \
+    "(${expected:0:12})."

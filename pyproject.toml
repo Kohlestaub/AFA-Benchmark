@@ -50,7 +50,9 @@ dev = [
   "pytest-dependency>=0.6.0",
   "pytest-watch>=4.2.0",
   "ruff>=0.14.8",
-  "snakemake>=9.12.0",
+  # 9.17 fixes local runs starting more jobs at once than --cores allows,
+  # which the minerva profile relies on.
+  "snakemake>=9.17.0",
   "snakemake-executor-plugin-slurm>=1.8.0",
   "visidata>=3.3",
 ]
