@@ -17,7 +17,7 @@ keep-going: true
 rerun-incomplete: true
 
 # Only rerun steps whose inputs are newer than their outputs, not when code or
-# parameters change. Datasets generated on the login node or on another
-# machine are then reused, which matters because compute nodes cannot
-# download data. Rerun steps on purpose with --forcerun.
+# parameters change. Datasets or other outputs copied from another machine
+# are then reused, which matters because compute nodes cannot download data.
+# Rerun steps on purpose with --forcerun.
 rerun-triggers: mtime

@@ -2,8 +2,8 @@
 
 This tutorial runs the Snakemake pipeline on the minerva Slurm cluster. On
 minerva a job runs for at most a day and should use one GPU (an L40s or an
-L4), compute nodes have no internet access, and nothing can be installed
-system-wide. The setup is:
+L4), compute nodes have no internet access, the login node is not for
+heavy work, and nothing can be installed system-wide. The setup is:
 
 - **One Slurm job runs the whole pipeline.** It holds one GPU for up to a
   day. Snakemake runs inside that job and runs the pipeline steps on the
@@ -58,22 +58,28 @@ ssh minerva 'cd afabench \
 `uv.lock` and `containers/afabench.def`. Run it after every `git pull`; it
 fails when you need to rebuild.
 
-## 3. Generate the datasets on the login node
+## 3. Datasets
 
-Some datasets (for example the UCI datasets and MNIST) are downloaded on
-first use, which the compute nodes cannot do. Generate the datasets on the
-login node, inside the image, before submitting anything:
+The job generates the datasets it needs on the compute node. Synthetic
+datasets such as `cube` and those whose data is in the repository need
+nothing else. The UCI datasets (`actg`, `bank_marketing`, `ckd`) and the
+image datasets (`mnist`, `fashion_mnist`, `imagenette`) are downloaded on
+first use, which the compute nodes cannot do. Download them on your own
+machine instead. Generating a dataset there saves its downloaded files in
+`extra/data/misc/`, and the job only needs those files. For the UCI
+datasets, from the repository root on your machine:
 
 ```shell
 apptainer exec containers/afabench.sif snakemake \
     --profile extra/workflow/profiles/config/all all_generate_datasets \
-    --cores 4 --config use_wandb=false "datasets=[cube]"
+    --cores 4 --config use_wandb=false "datasets=[actg,bank_marketing,ckd]"
+scp extra/data/misc/{actg.csv,bank-marketing.csv,chronic_kidney_disease.csv} \
+    minerva:afabench/extra/data/misc/
 ```
 
-Leave out `"datasets=[...]"` to generate every dataset. If this cannot run on
-the login node, run the same command in your clone on your own machine and
-copy the result with
-`rsync -a extra/output/datasets/ minerva:afabench/extra/output/datasets/`.
+For the image datasets, copy the folders `extra/data/misc/MNIST`,
+`extra/data/misc/FashionMNIST` or `extra/data/misc/imagenette` the same way,
+with `scp -r`.
 
 ## 4. Run the pipeline
 
